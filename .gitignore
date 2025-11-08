@@ -1,0 +1,17 @@
+# Node & Python cache
+node_modules/
+__pycache__/
+
+# Environment files
+*.env
+.env
+
+# Build output
+frontend/dist/
+frontend/build/
+*.log
+
+# VSCode & system files
+.vscode/
+.DS_Store
+Thumbs.db
