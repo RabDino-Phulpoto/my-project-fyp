@@ -1,32 +1,37 @@
 import { Route, Routes } from "react-router-dom";
 
-// Pages
+// Public Pages
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import LandingPage from "./pages/LandingPage"; // 🌟 Added for your new homepage
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
+
+// Protected Pages
 import AboutHelpPage from "./pages/AboutHelpPage";
 import DashboardPage from "./pages/DashboardPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import LoginPage from "./pages/LoginPage";
 import NeedHelpPage from "./pages/NeedHelpPage";
 import ProcessingPage from "./pages/ProcessingPage";
-import RegisterPage from "./pages/RegisterPage";
 import ReportHistoryPage from "./pages/ReportHistoryPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
 import ResultPage from "./pages/ResultPage";
 import SettingsPage from "./pages/SettingsPage";
 import UploadScanPage from "./pages/UploadScanPage";
 
-// 🔒 Import the ProtectedRoute component
+// Auth Guard
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
   return (
     <Routes>
-      {/* ---------- Public (Auth) Routes ---------- */}
-      <Route path="/" element={<LoginPage />} />
+
+      {/* -------- Public Routes (NO LOGIN NEEDED) -------- */}
+      <Route path="/" element={<LandingPage />} />          {/* 🌟 New Landing Page */}
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
-      {/* ---------- Protected Routes ---------- */}
+      {/* -------- Protected Routes (LOGIN REQUIRED) -------- */}
       <Route
         path="/dashboard"
         element={
@@ -35,6 +40,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/upload"
         element={
@@ -43,6 +49,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/results"
         element={
@@ -51,6 +58,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/reports"
         element={
@@ -59,6 +67,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/settings"
         element={
@@ -67,6 +76,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/processing"
         element={
@@ -75,6 +85,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/about"
         element={
@@ -83,6 +94,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
       <Route
         path="/help"
         element={
@@ -91,6 +103,7 @@ function App() {
           </ProtectedRoute>
         }
       />
+
     </Routes>
   );
 }
