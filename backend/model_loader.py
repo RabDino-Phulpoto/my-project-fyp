@@ -1,5 +1,5 @@
 import os
-# Suppress TensorFlow logging to save memory and keep logs clean
+# Suppress TensorFlow logging to save memory
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
 
 import tensorflow as tf
@@ -7,21 +7,40 @@ import tensorflow as tf
 # Optimization: Limit TensorFlow to use minimal memory on CPU
 physical_devices = tf.config.list_physical_devices('CPU')
 try:
-    # This helps prevent memory spikes during model loading
     tf.config.set_visible_devices(physical_devices[0], 'CPU')
 except:
     pass
 
-def load_medical_models():
-    # Get the path to the 'models' folder inside 'backend'
+def find_model_path(model_name):
+    """Helper to find model files in different environments"""
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    clf_path = os.path.join(base_dir, 'models', 'best_aneurysm_model.keras')
-    seg_path = os.path.join(base_dir, 'models', 'unet_segmenter.keras')
+    
+    # Path 1: models/name.keras (Directly inside backend)
+    path1 = os.path.join(base_dir, 'models', model_name)
+    # Path 2: backend/models/name.keras (Monorepo root)
+    path2 = os.path.join(base_dir, 'backend', 'models', model_name)
+    
+    if os.path.exists(path1):
+        return path1
+    elif os.path.exists(path2):
+        return path2
+    return path1 # Fallback to path1 for error reporting
+
+def load_medical_models():
+    clf_path = find_model_path('best_aneurysm_model.keras')
+    seg_path = find_model_path('unet_segmenter.keras')
 
     try:
-        print("🔄 Loading AI Models into memory (1GB Limit)... please wait.")
+        print(f"🔄 Searching for models...")
+        print(f"DEBUG: Using Clf Path: {clf_path}")
         
-        # compile=False saves memory because we only need the models for prediction (inference)
+        if not os.path.exists(clf_path):
+            print(f"❌ CRITICAL ERROR: {clf_path} does not exist on disk!")
+            return None, None
+
+        print("🔄 Loading AI Models into memory (1GB Limit)...")
+        
+        # compile=False is mandatory to keep memory usage under 1GB
         clf_model = tf.keras.models.load_model(clf_path, compile=False)
         seg_model = tf.keras.models.load_model(seg_path, compile=False)
         
