@@ -1,11 +1,9 @@
 import os
-import cv2
-import numpy as np
+import requests
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 from auth import auth
-from model_loader import load_medical_models
 from utils import now_utc
 
 load_dotenv()
@@ -13,12 +11,15 @@ load_dotenv()
 def create_app():
     app = Flask(__name__)
 
-    # 1. Initialize AI Models
-    clf_model, seg_model = load_medical_models()
-
-    # 2. Configure Folders
+    # 1. Configure Folders for segmentation results
     RESULTS_DIR = os.path.join(app.root_path, 'static', 'results')
     os.makedirs(RESULTS_DIR, exist_ok=True)
+
+    # 2. Hugging Face Configuration
+    HF_TOKEN = os.getenv("HF_TOKEN")
+    MODEL_REPO = os.getenv("HF_MODEL_REPO", "Phulpoto/aneurysm-detection")
+    API_URL = f"https://api-inference.huggingface.co/models/{MODEL_REPO}"
+    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
     # 3. Dynamic CORS & URLs for Production
     BACKEND_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN", "http://127.0.0.1:5000")
@@ -41,7 +42,11 @@ def create_app():
 
     @app.get("/")
     def root():
-        return jsonify({"message": "IADS Flask Backend Running ✅", "database": "Connected"})
+        return jsonify({
+            "message": "IADS Flask Backend Running (Microservices Mode) ✅", 
+            "database": "Connected",
+            "ai_provider": "Hugging Face Inference API"
+        })
 
     @app.post("/api/analyze-scan")
     def analyze_scan():
@@ -49,43 +54,30 @@ def create_app():
             return jsonify({"error": "No scan uploaded"}), 400
 
         file = request.files['image']
+        img_bytes = file.read()
         
         try:
-            img_bytes = np.frombuffer(file.read(), np.uint8)
-            original_img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+            # --- STEP 1: PING HUGGING FACE API ---
+            response = requests.post(API_URL, headers=headers, data=img_bytes)
             
-            rgb_224 = cv2.resize(cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB), (224, 224))
-            input_rgb = np.expand_dims(rgb_224 / 255.0, axis=0)
-
-            gray_224 = cv2.resize(cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY), (224, 224))
-            input_gray = gray_224.reshape(1, 224, 224, 1) / 255.0
-
-            try:
-                prediction = clf_model.predict(input_rgb)[0][0]
-            except Exception:
-                prediction = clf_model.predict(input_gray)[0][0]
-
-            is_positive = prediction > 0.5
+            # 503 means the model is still loading on Hugging Face servers
+            if response.status_code == 503:
+                return jsonify({"error": "AI Model is starting up on HF, try again in 20s"}), 503
             
-            result_data = {
-                "label": "Positive" if is_positive else "Negative",
-                "confidence": round(float(prediction) * 100, 2),
-                "segmentation_url": None
-            }
+            if response.status_code != 200:
+                print(f"HF Error: {response.text}")
+                return jsonify({"error": "AI Inference failed"}), response.status_code
 
-            if is_positive:
-                mask = seg_model.predict(input_gray)[0]
-                if len(mask.shape) == 3:
-                    mask = np.squeeze(mask, axis=-1)
-                
-                mask_visual = (mask * 255).astype(np.uint8)
-                filename = f"seg_{int(now_utc().timestamp())}_{file.filename}.png"
-                save_path = os.path.join(RESULTS_DIR, filename)
-                cv2.imwrite(save_path, mask_visual)
-                
-                result_data["segmentation_url"] = f"{BACKEND_URL}/static/results/{filename}"
+            # Hugging Face returns a list of predictions
+            # Note: You may need to format this to match your frontend expectations
+            prediction_result = response.json()
 
-            return jsonify(result_data)
+            # --- STEP 2: RETURN RESULTS ---
+            return jsonify({
+                "status": "success",
+                "data": prediction_result,
+                "timestamp": now_utc()
+            })
 
         except Exception as e:
             print(f"Analysis Error: {e}")
@@ -94,7 +86,7 @@ def create_app():
     app.register_blueprint(auth, url_prefix="/api/auth")
     return app
 
-# CRITICAL: This must be at the base level so gunicorn can find it
+# Gunicorn entry point
 app = create_app()
 
 if __name__ == "__main__":
