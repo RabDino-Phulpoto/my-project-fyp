@@ -4,12 +4,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-MONGO_URI = os.getenv("MONGO_URI")
-if not MONGO_URI:
-    raise RuntimeError("MONGO_URI missing in .env")
+# Get the URI from Railway variables
+uri = os.getenv("MONGO_URI")
 
-client = MongoClient(MONGO_URI)
-db = client.get_database()  # uses the DB in URI (iads)
-users = db["users"]         # collection for user accounts
-reports = db["reports"]     # collection for scan reports
-patients = db["patients"]   # collection for patient records
+# Connect to the client
+client = MongoClient(uri)
+
+# Use the square bracket notation to fix the "No default database" error
+# Replace 'iads' with your actual DB name if it's different
+db = client['iads'] 
+
+users = db['users']
+reports = db['reports']
