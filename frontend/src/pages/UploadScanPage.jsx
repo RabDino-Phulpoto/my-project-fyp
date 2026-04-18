@@ -1,93 +1,199 @@
-import { UploadCloud } from "lucide-react";
+import { FileText, Loader2, UploadCloud } from "lucide-react";
 import { useState } from "react";
+import axiosInstance from "../axiosConfig";
 import Layout from "../components/Layout";
+import PatientModal from "../components/PatientModal";
+import ResultDisplay from "../components/ResultDisplay";
 
 export default function UploadScanPage() {
-  const [fileName, setFileName] = useState("");
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [patientInfo, setPatientInfo] = useState(null);
+  const [segmentedImage, setSegmentedImage] = useState(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) setFileName(file.name);
+    if (file && file.type.startsWith("image/")) {
+      setSelectedFile(file);
+      setPreview(URL.createObjectURL(file));
+      setResults(null);
+      setSegmentedImage(null);
+    } else {
+      alert("Please upload a valid image file");
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.add("bg-blue-50", "border-blue-300");
+  };
+
+  const handleDragLeave = (e) => {
+    e.currentTarget.classList.remove("bg-blue-50", "border-blue-300");
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("bg-blue-50", "border-blue-300");
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith("image/")) {
+      setSelectedFile(file);
+      setPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const runAnalysis = async () => {
+    if (!selectedFile) {
+      alert("Please upload a scan first!");
+      return;
+    }
+
+    setShowPatientModal(true);
+  };
+
+  const handlePatientSubmit = async (patientData) => {
+    setPatientInfo(patientData);
+    setShowPatientModal(false);
+    setLoading(true);
+
+    const formData = new FormData();
+    formData.append("image", selectedFile);
+    formData.append("patientName", patientData.patientName);
+    formData.append("patientId", patientData.patientId);
+
+    try {
+      // First analysis - Detection
+      const response = await axiosInstance.post("/api/analyze-scan", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      console.log("Analysis response:", response.data);
+      
+      // Transform response to match ResultDisplay expectations
+      const analysisResult = {
+        label: response.data.label, // "Positive" or "Negative"
+        confidence: response.data.confidence, // percentage (0-100)
+        segmentation_url: response.data.segmentation_url,
+      };
+
+      setResults(analysisResult);
+
+      // If positive and segmentation URL provided, load the segmented image
+      if (analysisResult.label === "Positive" && analysisResult.segmentation_url) {
+        try {
+          const segmentResponse = await axiosInstance.get(analysisResult.segmentation_url, {
+            responseType: "blob",
+          });
+          const segmentedImageUrl = URL.createObjectURL(segmentResponse.data);
+          setSegmentedImage(segmentedImageUrl);
+        } catch (segError) {
+          console.error("Failed to load segmented image:", segError);
+        }
+      }
+    } catch (error) {
+      console.error("Analysis Error:", error);
+      alert(`Analysis failed: ${error.response?.data?.error || error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <Layout active="Upload Scan">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-8">
-        Upload Medical Scan for Analysis
-      </h2>
+      <div className="max-w-5xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Analyze Brain Scan</h1>
+        <p className="text-gray-600 mb-8">Upload a brain MRI scan for AI-powered aneurysm detection</p>
 
-      {/* Upload Section */}
-      <div className="bg-white rounded-2xl shadow p-8">
-        {/* Upload Box */}
-        <label
-          htmlFor="file-upload"
-          className="flex flex-col items-center justify-center border-2 border-dashed border-blue-200 rounded-xl p-10 cursor-pointer hover:bg-blue-50 transition"
-        >
-          <UploadCloud className="w-10 h-10 text-blue-500 mb-2" />
-          <p className="text-gray-700 font-medium">Drag & drop to upload</p>
-          <p className="text-sm text-gray-500 mt-1">
-            DICOM (.dcm) / PNG / JPG — Max 10MB
-          </p>
-          <input
-            id="file-upload"
-            type="file"
-            accept=".dcm,.png,.jpg,.jpeg"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          {fileName && (
-            <p className="mt-3 text-sm text-blue-600">
-              Selected file: {fileName}
-            </p>
-          )}
-        </label>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Upload Section */}
+          <div className="lg:col-span-1">
+            {/* Upload Area */}
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-8 text-center transition-all hover:border-blue-300 cursor-pointer mb-6"
+            >
+              <label htmlFor="fileInput" className="cursor-pointer block">
+                <UploadCloud className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-sm font-semibold text-gray-900 mb-1">Click to upload or drag and drop</p>
+                <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
+                <input
+                  id="fileInput"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </label>
+            </div>
 
-        {/* Optional Info */}
-        <div className="mt-10">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">
-            Optional Patient Information
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="Name"
-              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-            <input
-              type="number"
-              placeholder="Age"
-              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-            <input
-              type="text"
-              placeholder="Patient ID"
-              className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-            />
-            <select className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none">
-              <option value="">Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-            </select>
+            {/* Preview */}
+            {preview && (
+              <div className="bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm mb-6">
+                <div className="bg-gray-100 px-4 py-3 border-b border-gray-200">
+                  <p className="text-sm font-semibold text-gray-700">Preview</p>
+                </div>
+                <div className="aspect-square bg-gray-50 flex items-center justify-center overflow-auto">
+                  <img src={preview} alt="Preview" className="w-full h-full object-contain p-4" />
+                </div>
+              </div>
+            )}
+
+            {/* Analyze Button */}
+            <button
+              onClick={runAnalysis}
+              disabled={!selectedFile || loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold py-3 rounded-xl transition-colors flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <FileText className="w-4 h-4" />
+                  Analyze Scan
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Results Section */}
+          <div className="lg:col-span-2">
+            {loading ? (
+              <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
+                <Loader2 className="w-12 h-12 text-blue-600 mx-auto animate-spin mb-4" />
+                <p className="text-gray-900 font-semibold mb-2">Analyzing your scan...</p>
+                <p className="text-sm text-gray-600">This usually takes 30-60 seconds</p>
+              </div>
+            ) : results ? (
+              <ResultDisplay
+                result={results}
+                originalImage={preview}
+                segmentedImage={segmentedImage}
+                patientInfo={patientInfo}
+              />
+            ) : (
+              <div className="bg-white rounded-2xl p-12 text-center border border-gray-200 shadow-sm">
+                <UploadCloud className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                <p className="text-gray-900 font-semibold mb-2">No analysis yet</p>
+                <p className="text-sm text-gray-600">Upload a scan and click "Analyze Scan" to get started</p>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Run Analysis Button */}
-        <button
-          type="button"
-          className="mt-8 w-full bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition flex justify-center items-center space-x-2"
-        >
-          <span>Run AI Analysis</span>
-        </button>
-
-        {/* Footer Info */}
-        <p className="text-sm text-gray-500 mt-4">
-          Supported Formats: DICOM (.dcm), PNG, JPG — Max 10 MB
-        </p>
       </div>
 
-      <p className="text-xs text-gray-400 mt-8 text-center">
-        Prototype v1.0 | IADS © 2025
-      </p>
+      <PatientModal
+        isOpen={showPatientModal}
+        onClose={() => setShowPatientModal(false)}
+        onSubmit={handlePatientSubmit}
+      />
     </Layout>
   );
 }

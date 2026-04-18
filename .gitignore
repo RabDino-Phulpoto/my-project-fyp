@@ -1,17 +1,45 @@
-# Node & Python cache
-node_modules/
+# === Python & AI (Backend) ===
+backend/venv/
+backend/.venv/
+backend/env/
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
 
-# Environment files
-*.env
-.env
-
-# Build output
+# === Node.js & React (Frontend) ===
+node_modules/
+frontend/node_modules/
 frontend/dist/
 frontend/build/
-*.log
+.npm
+.eslintcache
 
-# VSCode & system files
+# === Environment & Secrets ===
+.env
+*.env
+backend/.env
+frontend/.env
+.flaskenv
+
+# === Database ===
+*.db
+*.sqlite3
+
+# === IDE & System Files ===
 .vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
 .DS_Store
 Thumbs.db
+
+# === Large Models (Handled by LFS) ===
+# We keep these here as a reminder that Git LFS tracks them
+# backend/models/*.keras

@@ -1,14 +1,17 @@
-import { BarChart2, FileText, Home, LogOut, Settings, Upload } from "lucide-react";
+import { FileText, Home, LogOut, Settings, Upload, User, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useTheme } from "../context/ThemeContext";
 
 export default function Sidebar({ active }) {
   const navigate = useNavigate();
+  const { isDarkMode } = useTheme();
 
   const navItems = [
     { name: "Dashboard", icon: Home, path: "/dashboard" },
-    { name: "Upload Scan", icon: Upload, path: "/upload" },
-    { name: "Results", icon: BarChart2, path: "/results" },
-    { name: "Reports", icon: FileText, path: "/reports" },
+    { name: "Upload Scan", icon: Upload, path: "/upload-scan" },
+    { name: "Report History", icon: FileText, path: "/report-history" },
+    { name: "Patients", icon: Users, path: "/patients" },
+    { name: "Profile", icon: User, path: "/profile" },
     { name: "Settings", icon: Settings, path: "/settings" },
   ];
 
@@ -29,14 +32,14 @@ export default function Sidebar({ active }) {
   };
 
   return (
-    <aside className="w-64 bg-white shadow-lg flex flex-col justify-between rounded-r-2xl">
+    <aside className={`w-64 shadow-lg flex flex-col justify-between rounded-r-2xl ${isDarkMode ? "bg-gray-800" : "bg-white"}`}>
       {/* Logo Header */}
       <div>
-        <div className="p-6 flex items-center space-x-2 border-b">
+        <div className={`p-6 flex items-center space-x-2 border-b ${isDarkMode ? "border-gray-700" : ""}`}>
           <div className="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-lg">
             AI
           </div>
-          <h1 className="font-semibold text-sm text-gray-700 leading-tight">
+          <h1 className={`font-semibold text-sm leading-tight ${isDarkMode ? "text-gray-200" : "text-gray-700"}`}>
             INTRACRANIAL ANEURYSM DETECTION SYSTEM
           </h1>
         </div>
@@ -52,7 +55,11 @@ export default function Sidebar({ active }) {
                 onClick={() => navigate(item.path)}
                 className={`flex items-center w-full px-6 py-2 font-medium transition ${
                   isActive
-                    ? "text-blue-600 bg-blue-50 border-l-4 border-blue-600"
+                    ? isDarkMode 
+                      ? "text-blue-400 bg-gray-700 border-l-4 border-blue-400"
+                      : "text-blue-600 bg-blue-50 border-l-4 border-blue-600"
+                    : isDarkMode
+                    ? "text-gray-400 hover:bg-gray-700 hover:text-blue-400"
                     : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                 }`}
               >
@@ -65,11 +72,11 @@ export default function Sidebar({ active }) {
       </div>
 
       {/* Footer */}
-      <div className="border-t p-6 flex items-center justify-between text-gray-500 text-sm">
+      <div className={`border-t p-6 flex items-center justify-between text-sm ${isDarkMode ? "border-gray-700 text-gray-400" : "text-gray-500"}`}>
         <span>Prefuogee</span>
         <button
           onClick={handleLogout}
-          className="flex items-center text-gray-500 hover:text-red-500 transition"
+          className={`flex items-center transition ${isDarkMode ? "text-gray-400 hover:text-red-400" : "text-gray-500 hover:text-red-500"}`}
         >
           <LogOut className="w-4 h-4 mr-1" />
           Logout

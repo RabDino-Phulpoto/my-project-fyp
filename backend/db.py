@@ -11,3 +11,5 @@ if not MONGO_URI:
 client = MongoClient(MONGO_URI)
 db = client.get_database()  # uses the DB in URI (iads)
 users = db["users"]         # collection for user accounts
+reports = db["reports"]     # collection for scan reports
+patients = db["patients"]   # collection for patient records

@@ -1,4 +1,5 @@
-import { Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Route, Routes, useNavigate } from "react-router-dom";
 
 // Public Pages
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -11,7 +12,9 @@ import ResetPasswordPage from "./pages/ResetPasswordPage";
 import AboutHelpPage from "./pages/AboutHelpPage";
 import DashboardPage from "./pages/DashboardPage";
 import NeedHelpPage from "./pages/NeedHelpPage";
+import PatientManagementPage from "./pages/PatientManagementPage";
 import ProcessingPage from "./pages/ProcessingPage";
+import ProfilePage from "./pages/ProfilePage";
 import ReportHistoryPage from "./pages/ReportHistoryPage";
 import ResultPage from "./pages/ResultPage";
 import SettingsPage from "./pages/SettingsPage";
@@ -21,6 +24,19 @@ import UploadScanPage from "./pages/UploadScanPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function App() {
+  const navigate = useNavigate();
+
+  // Initialize token on app load and set up axios interceptor
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      // Set axios default header for all requests
+      import("axios").then((axiosModule) => {
+        axiosModule.default.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+      });
+    }
+  }, []);
+
   return (
     <Routes>
 
@@ -42,7 +58,7 @@ function App() {
       />
 
       <Route
-        path="/upload"
+        path="/upload-scan"
         element={
           <ProtectedRoute>
             <UploadScanPage />
@@ -60,10 +76,19 @@ function App() {
       />
 
       <Route
-        path="/reports"
+        path="/report-history"
         element={
           <ProtectedRoute>
             <ReportHistoryPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/patients"
+        element={
+          <ProtectedRoute>
+            <PatientManagementPage />
           </ProtectedRoute>
         }
       />
@@ -73,6 +98,15 @@ function App() {
         element={
           <ProtectedRoute>
             <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />

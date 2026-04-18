@@ -1,17 +1,31 @@
-import axios from "axios";
-const API_URL = "http://127.0.0.1:5000";
+import axiosInstance from "./axiosConfig";
 
-export const startRegistration = (data) =>
-  axios.post(`${API_URL}/auth/register-start`, data);
+export const sendOTP = (data) =>
+  axiosInstance.post(`/api/auth/send-otp`, data);
 
-export const completeRegistration = (data) =>
-  axios.post(`${API_URL}/auth/register-complete`, data);
+export const verifyOTP = (data) =>
+  axiosInstance.post(`/api/auth/verify-otp`, data);
 
-// already had:
-export const registerUser = (data) => axios.post(`${API_URL}/auth/register`, data); // (old simple path, optional)
-export const loginUser = (data) => axios.post(`${API_URL}/auth/login`, data);
-export const forgotPassword = (data) => axios.post(`${API_URL}/auth/forgot`, data);
-export const resetPassword = (token, data) =>
-  axios.post(`${API_URL}/auth/reset/${token}`, data);
+export const registerUser = (data) =>
+  axiosInstance.post(`/api/auth/register`, data);
+
+export const loginUser = (data) =>
+  axiosInstance.post(`/api/auth/login`, data);
+
 export const getUserInfo = (token) =>
-  axios.get(`${API_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` }});
+  axiosInstance.get(`/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+
+export const forgotPasswordStart = (data) =>
+  axiosInstance.post(`/api/auth/forgot-password`, data);
+
+export const forgotPasswordVerify = (data) =>
+  axiosInstance.post(`/api/auth/forgot-verify-otp`, data);
+
+export const resetPassword = (data) =>
+  axiosInstance.post(`/api/auth/reset-password`, data);
+
+export const getUserStats = () =>
+  axiosInstance.get(`/api/user-stats`);
+
+export const getUserReports = (page = 1, limit = 10, filter = "all") =>
+  axiosInstance.get(`/api/user-reports`, { params: { page, limit, filter } });
