@@ -21,7 +21,6 @@ def create_app():
     os.makedirs(RESULTS_DIR, exist_ok=True)
 
     # 3. Dynamic CORS & URLs for Production
-    # On Railway, use the domain generated in Settings
     BACKEND_URL = os.getenv("RAILWAY_PUBLIC_DOMAIN", "http://127.0.0.1:5000")
     if not BACKEND_URL.startswith("http"):
         BACKEND_URL = f"https://{BACKEND_URL}"
@@ -55,15 +54,12 @@ def create_app():
             img_bytes = np.frombuffer(file.read(), np.uint8)
             original_img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
             
-            # Prepare RGB (3 channels) for Classification
             rgb_224 = cv2.resize(cv2.cvtColor(original_img, cv2.COLOR_BGR2RGB), (224, 224))
             input_rgb = np.expand_dims(rgb_224 / 255.0, axis=0)
 
-            # Prepare Grayscale (1 channel) for Segmentation
             gray_224 = cv2.resize(cv2.cvtColor(original_img, cv2.COLOR_BGR2GRAY), (224, 224))
             input_gray = gray_224.reshape(1, 224, 224, 1) / 255.0
 
-            # --- STEP 1: CLASSIFICATION ---
             try:
                 prediction = clf_model.predict(input_rgb)[0][0]
             except Exception:
@@ -77,10 +73,8 @@ def create_app():
                 "segmentation_url": None
             }
 
-            # --- STEP 2: SEGMENTATION ---
             if is_positive:
                 mask = seg_model.predict(input_gray)[0]
-                
                 if len(mask.shape) == 3:
                     mask = np.squeeze(mask, axis=-1)
                 
@@ -89,7 +83,6 @@ def create_app():
                 save_path = os.path.join(RESULTS_DIR, filename)
                 cv2.imwrite(save_path, mask_visual)
                 
-                # Use Dynamic Backend URL
                 result_data["segmentation_url"] = f"{BACKEND_URL}/static/results/{filename}"
 
             return jsonify(result_data)
@@ -98,13 +91,12 @@ def create_app():
             print(f"Analysis Error: {e}")
             return jsonify({"error": "Processing failed"}), 500
 
-    # ... [Rest of your report/patient endpoints remain the same] ...
     app.register_blueprint(auth, url_prefix="/api/auth")
     return app
 
+# CRITICAL: This must be at the base level so gunicorn can find it
 app = create_app()
 
 if __name__ == "__main__":
-    # Use environment port for Railway
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
